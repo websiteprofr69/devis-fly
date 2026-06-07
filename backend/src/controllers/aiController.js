@@ -1,23 +1,56 @@
 // backend/src/controllers/aiController.js
-import Anthropic from '@anthropic-ai/sdk';
 import db from '../config/database.js';
 
 const AI_MODEL = process.env.AI_MODEL || 'anthropic/claude-sonnet-4';
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  baseURL: 'https://openrouter.ai/api/v1',
-  defaultHeaders: {
-    'HTTP-Referer': process.env.APP_URL || 'https://devis.fly.dev',
-    'X-Title': 'DevisPro',
-  },
-});
+const SYSTEM_PROMPT = `Tu es un assistant expert en bâtiment et toiture. Ton rôle est d'extraire des informations structurées d'une demande de devis en français.
+Réponds UNIQUEMENT en JSON valide, sans markdown, sans texte avant ou après.
+Le JSON doit respecter strictement ce schéma :
+{
+  "travaux_type": string (ex: "Toiture", "Isolation", "Toiture + Isolation"),
+  "surface_m2": number | null,
+  "region": string | null (normalise vers: "Île-de-France", "Rhône-Alpes", "PACA", "Bretagne", "Occitanie", ou null si inconnue),
+  "prestations": array of strings (liste des travaux détectés parmi: "Dépose toiture", "Pose charpente", "Remontage tuiles", "Isolation", "Évacuation gravats", "Étanchéité"),
+  "client_name": string | null,
+  "notes": string | null (informations complémentaires)
+}`;
+
+async function callOpenRouter(prompt) {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.ANTHROPIC_API_KEY}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.APP_URL || 'https://devis.fly.dev',
+      'X-Title': 'DevisPro',
+    },
+    body: JSON.stringify({
+      model: AI_MODEL,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `Demande de devis: "${prompt}"` },
+      ],
+      max_tokens: 1024,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    const errMsg = data?.error?.message || data?.error?.code || `OpenRouter HTTP ${res.status}`;
+    throw new Error(String(errMsg));
+  }
+
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error('Réponse IA vide');
+  return content;
+}
 
 /**
  * POST /api/ai/generate
- * Accepts a natural language prompt and returns structured quote lines
  */
-export async function generateFromPrompt(req, res, next) {
+export async function generateFromPrompt(req, res) {
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
       return res.status(503).json({ error: 'Clé API IA non configurée. Ajoutez ANTHROPIC_API_KEY sur Fly.io.' });
@@ -28,28 +61,7 @@ export async function generateFromPrompt(req, res, next) {
       return res.status(400).json({ error: 'Prompt trop court. Décrivez votre demande de devis.' });
     }
 
-    // ── Step 1: Extract structured data from LLM ─────────────────────────────
-    const extractionResponse = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: 1024,
-      system: `Tu es un assistant expert en bâtiment et toiture. Ton rôle est d'extraire des informations structurées d'une demande de devis en français.
-Réponds UNIQUEMENT en JSON valide, sans markdown, sans texte avant ou après.
-Le JSON doit respecter strictement ce schéma :
-{
-  "travaux_type": string (ex: "Toiture", "Isolation", "Toiture + Isolation"),
-  "surface_m2": number | null,
-  "region": string | null (normalise vers: "Île-de-France", "Rhône-Alpes", "PACA", "Bretagne", "Occitanie", ou null si inconnue),
-  "prestations": array of strings (liste des travaux détectés parmi: "Dépose toiture", "Pose charpente", "Remontage tuiles", "Isolation", "Évacuation gravats", "Étanchéité"),
-  "client_name": string | null,
-  "notes": string | null (informations complémentaires)
-}`,
-      messages: [{ role: 'user', content: `Demande de devis: "${prompt}"` }],
-    });
-
-    const rawText = extractionResponse.content
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('');
+    const rawText = await callOpenRouter(prompt.trim());
 
     let extracted;
     try {
@@ -58,7 +70,6 @@ Le JSON doit respecter strictement ce schéma :
       return res.status(422).json({ error: "L'IA n'a pas pu analyser votre demande. Reformulez en précisant les travaux, la surface et la région." });
     }
 
-    // ── Step 2: Fetch matching prices from DB ────────────────────────────────
     const region = extracted.region || 'Île-de-France';
     const surface = extracted.surface_m2 || 100;
     const prestations = extracted.prestations || [];
@@ -74,7 +85,6 @@ Le JSON doit respecter strictement ce schéma :
         .get(region, prestation);
 
       if (!pricing) {
-        // Fallback: try any region
         const fallback = db.prepare('SELECT * FROM pricing_grid WHERE prestationType = ?').get(prestation);
         if (!fallback) continue;
         const qty = fallback.unit === 'forfait' ? 1 : surface;
@@ -120,12 +130,12 @@ Le JSON doit respecter strictement ce schéma :
   } catch (err) {
     console.error('[AI]', err.message);
     const msg = String(err.message || '');
-    if (msg.includes('401') || msg.includes('Unauthorized')) {
+    if (msg.includes('401') || msg.toLowerCase().includes('unauthorized') || msg.toLowerCase().includes('invalid')) {
       return res.status(502).json({ error: 'Clé API OpenRouter invalide. Vérifiez ANTHROPIC_API_KEY sur Fly.io.' });
     }
-    if (msg.includes('404')) {
-      return res.status(502).json({ error: 'Modèle IA introuvable sur OpenRouter. Contactez le support.' });
+    if (msg.includes('402') || msg.toLowerCase().includes('credit')) {
+      return res.status(502).json({ error: 'Crédits OpenRouter insuffisants. Rechargez sur openrouter.ai.' });
     }
-    return res.status(502).json({ error: 'Service IA temporairement indisponible. Réessayez dans un instant.' });
+    return res.status(502).json({ error: `Erreur IA : ${msg}` });
   }
 }
