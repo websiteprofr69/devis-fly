@@ -34,7 +34,10 @@ app.use(helmet({
     },
   },
 }));
-app.use(cors({ origin: process.env.FRONTEND_URL || true, credentials: true }));
+const corsOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map((o) => o.trim())
+  : true;
+app.use(cors({ origin: corsOrigins, credentials: true }));
 app.use(express.json({ limit: '10kb' }));
 
 const limiter = rateLimit({
