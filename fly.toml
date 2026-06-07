@@ -1,4 +1,4 @@
-app = 'devis-pro-api'
+app = 'devis'
 primary_region = 'cdg'
 
 [build]

@@ -6,7 +6,7 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
   baseURL: 'https://openrouter.ai/api/v1',
   defaultHeaders: {
-    'HTTP-Referer': 'http://localhost:3001',
+    'HTTP-Referer': process.env.APP_URL || 'https://devis.fly.dev',
   }
 });
 
@@ -16,6 +16,10 @@ const client = new Anthropic({
  */
 export async function generateFromPrompt(req, res, next) {
   try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(503).json({ error: 'Clé API IA non configurée. Ajoutez ANTHROPIC_API_KEY sur Fly.io.' });
+    }
+
     const { prompt } = req.body;
     if (!prompt || prompt.trim().length < 10) {
       return res.status(400).json({ error: 'Prompt trop court. Décrivez votre demande de devis.' });
