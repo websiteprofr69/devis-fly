@@ -61,9 +61,12 @@ window.QuoteEditor = {
     tbody.innerHTML = this.lines.map((line, i) => `
       <tr>
         <td><input class="input-field" style="min-width:180px;" value="${this.esc(line.designation)}" onchange="QuoteEditor.updateLine(${i},'designation',this.value)" /></td>
-        <td>
-          <select class="input-field" onchange="QuoteEditor.updateLine(${i},'unit',this.value)">
-            ${['m2','ml','h','forfait','u'].map((u) => `<option ${line.unit === u ? 'selected' : ''}>${u}</option>`).join('')}
+        <td class="quote-unit-cell">
+          <select class="input-field quote-select" onchange="QuoteEditor.updateLine(${i},'unit',this.value)">
+            ${['m2','ml','h','forfait','u'].map((u) => {
+              const label = u === 'm2' ? 'm²' : u;
+              return `<option value="${u}" ${line.unit === u ? 'selected' : ''}>${label}</option>`;
+            }).join('')}
           </select>
         </td>
         <td class="quote-qty-cell">
@@ -72,8 +75,8 @@ window.QuoteEditor = {
         <td class="quote-price-cell">
           <input class="input-field quote-num-input quote-price-input" type="text" inputmode="decimal" size="10" title="${this.fmtPrice(line.price_ht)}" value="${this.fmtPrice(line.price_ht)}" onchange="QuoteEditor.updateLine(${i},'price_ht',this.value)" />
         </td>
-        <td>
-          <select class="input-field" onchange="QuoteEditor.updateLine(${i},'tva_rate',this.value)">
+        <td class="quote-tva-cell">
+          <select class="input-field quote-select" onchange="QuoteEditor.updateLine(${i},'tva_rate',this.value)">
             <option value="0.10" ${this.tvaSelected(line.tva_rate, 0.10) ? 'selected' : ''}>10%</option>
             <option value="0.20" ${this.tvaSelected(line.tva_rate, 0.20) ? 'selected' : ''}>20%</option>
             <option value="0.055" ${this.tvaSelected(line.tva_rate, 0.055) ? 'selected' : ''}>5.5%</option>

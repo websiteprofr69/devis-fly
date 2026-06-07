@@ -173,6 +173,14 @@
     }
     .quote-qty-input { min-width: 120px; }
     .quote-price-input { min-width: 130px; }
+    .quote-unit-cell { width: 115px; min-width: 115px; }
+    .quote-tva-cell { width: 100px; min-width: 100px; }
+    .quote-select {
+      width: 100%;
+      min-width: 0;
+      padding-right: 32px;
+      text-overflow: ellipsis;
+    }
 
     /* Loading spinner */
     .spinner {
@@ -357,10 +365,10 @@
             <thead>
               <tr>
                 <th style="min-width:200px;">Désignation</th>
-                <th style="width:90px;">Unité</th>
+                <th class="quote-unit-cell">Unité</th>
                 <th class="quote-qty-cell">Qté</th>
                 <th class="quote-price-cell">Prix HT</th>
-                <th style="width:90px;">TVA</th>
+                <th class="quote-tva-cell">TVA</th>
                 <th style="width:110px;">Total TTC</th>
                 <th style="width:40px;"></th>
               </tr>
@@ -420,9 +428,9 @@
     <span id="toastMsg"></span>
   </div>
 
-  <script src="assets/config.js?v=20250607"></script>
-  <script src="assets/quote-editor.js?v=20250607"></script>
-  <script src="assets/app.js?v=20250607"></script>
+  <script src="assets/config.js?v=20250608"></script>
+  <script src="assets/quote-editor.js?v=20250608"></script>
+  <script src="assets/app.js?v=20250608"></script>
   <script>
     (function renderNav() {
       const nav = document.getElementById('navAuth');
