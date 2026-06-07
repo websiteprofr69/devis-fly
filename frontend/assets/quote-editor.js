@@ -9,15 +9,31 @@ window.QuoteEditor = {
     if (totalsIds) this.totalsIds = totalsIds;
   },
 
+  parseNum(val) {
+    if (typeof val === 'number') return val;
+    const n = parseFloat(String(val).replace(/\s/g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
+  },
+
+  normalizeTva(rate) {
+    const r = this.parseNum(rate);
+    if (r >= 1) return r / 100; // 10 → 10%, 20 → 20%
+    return r || 0.10;
+  },
+
+  tvaSelected(rate, target) {
+    return Math.abs(this.normalizeTva(rate) - target) < 0.001;
+  },
+
   setLines(lines) {
     this.lines = (lines || []).map((l) => ({
       designation: l.designation || '',
       unit: l.unit || 'm2',
-      qty: l.qty ?? 1,
-      price_ht: l.price_ht ?? 0,
-      tva_rate: l.tva_rate ?? 0.10,
-      total_ht: l.total_ht ?? 0,
-      total_ttc: l.total_ttc ?? 0,
+      qty: this.parseNum(l.qty ?? 1),
+      price_ht: this.parseNum(l.price_ht ?? 0),
+      tva_rate: this.normalizeTva(l.tva_rate ?? 0.10),
+      total_ht: 0,
+      total_ttc: 0,
       editable: true,
     }));
     this.lines.forEach((_, i) => this.recalcLine(i));
@@ -25,6 +41,9 @@ window.QuoteEditor = {
 
   recalcLine(i) {
     const l = this.lines[i];
+    l.qty = this.parseNum(l.qty);
+    l.price_ht = this.parseNum(l.price_ht);
+    l.tva_rate = this.normalizeTva(l.tva_rate);
     l.total_ht = +(l.qty * l.price_ht).toFixed(2);
     l.total_ttc = +(l.total_ht * (1 + l.tva_rate)).toFixed(2);
   },
@@ -47,13 +66,17 @@ window.QuoteEditor = {
             ${['m2','ml','h','forfait','u'].map((u) => `<option ${line.unit === u ? 'selected' : ''}>${u}</option>`).join('')}
           </select>
         </td>
-        <td><input class="input-field" type="number" min="0" step="0.01" value="${line.qty}" onchange="QuoteEditor.updateLine(${i},'qty',+this.value)" /></td>
-        <td><input class="input-field" type="number" min="0" step="0.01" value="${line.price_ht}" onchange="QuoteEditor.updateLine(${i},'price_ht',+this.value)" /></td>
+        <td style="min-width:100px;">
+          <input class="input-field quote-num-input quote-qty-input" type="text" inputmode="numeric" title="${this.fmtQty(line.qty)}" value="${this.fmtQty(line.qty)}" onchange="QuoteEditor.updateLine(${i},'qty',this.value)" />
+        </td>
+        <td style="min-width:120px;">
+          <input class="input-field quote-num-input quote-price-input" type="text" inputmode="decimal" title="${this.fmtPrice(line.price_ht)}" value="${this.fmtPrice(line.price_ht)}" onchange="QuoteEditor.updateLine(${i},'price_ht',this.value)" />
+        </td>
         <td>
-          <select class="input-field" onchange="QuoteEditor.updateLine(${i},'tva_rate',+this.value)">
-            <option value="0.10" ${line.tva_rate === 0.10 ? 'selected' : ''}>10%</option>
-            <option value="0.20" ${line.tva_rate === 0.20 ? 'selected' : ''}>20%</option>
-            <option value="0.055" ${line.tva_rate === 0.055 ? 'selected' : ''}>5.5%</option>
+          <select class="input-field" onchange="QuoteEditor.updateLine(${i},'tva_rate',this.value)">
+            <option value="0.10" ${this.tvaSelected(line.tva_rate, 0.10) ? 'selected' : ''}>10%</option>
+            <option value="0.20" ${this.tvaSelected(line.tva_rate, 0.20) ? 'selected' : ''}>20%</option>
+            <option value="0.055" ${this.tvaSelected(line.tva_rate, 0.055) ? 'selected' : ''}>5.5%</option>
           </select>
         </td>
         <td id="line-ttc-${i}" style="font-weight:600;font-family:'Syne',sans-serif;">${this.fmt(line.total_ttc)} €</td>
@@ -77,7 +100,9 @@ window.QuoteEditor = {
   },
 
   updateLine(i, field, val) {
-    this.lines[i][field] = val;
+    if (field === 'tva_rate') this.lines[i][field] = this.normalizeTva(val);
+    else if (field === 'qty' || field === 'price_ht') this.lines[i][field] = this.parseNum(val);
+    else this.lines[i][field] = val;
     this.recalcLine(i);
     const cell = document.getElementById(`line-ttc-${i}`);
     if (cell) cell.textContent = `${this.fmt(this.lines[i].total_ttc)} €`;
@@ -96,6 +121,16 @@ window.QuoteEditor = {
   removeLine(i) {
     this.lines.splice(i, 1);
     this.render();
+  },
+
+  fmtQty(n) {
+    const num = this.parseNum(n);
+    return Number.isInteger(num) ? String(num) : String(num).replace('.', ',');
+  },
+
+  fmtPrice(n) {
+    const num = this.parseNum(n);
+    return Number.isInteger(num) ? String(num) : num.toFixed(2).replace('.', ',');
   },
 
   fmt(n) {

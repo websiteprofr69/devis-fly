@@ -31,6 +31,9 @@
     .btn-danger{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;}
     .btn-ghost{background:transparent;color:var(--muted);border:none;padding:5px 8px;border-radius:6px;cursor:pointer;}
     .btn-ghost:hover{color:var(--text);background:var(--surface2);}
+    .quote-num-input{min-width:96px;width:100%;text-align:right;font-variant-numeric:tabular-nums;font-size:15px;padding:10px 14px;}
+    .quote-qty-input{min-width:100px;}
+    .quote-price-input{min-width:120px;}
     .view{display:none;}
     .view.active{display:block;}
     #toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;display:none;z-index:100;font-size:14px;}
@@ -112,7 +115,7 @@
         </div>
         <div style="overflow-x:auto;">
           <table class="admin-table">
-            <thead><tr><th>Désignation</th><th>Unité</th><th>Qté</th><th>Prix HT</th><th>TVA</th><th>Total TTC</th><th></th></tr></thead>
+            <thead><tr><th>Désignation</th><th>Unité</th><th style="min-width:100px;">Qté</th><th style="min-width:120px;">Prix HT</th><th>TVA</th><th>Total TTC</th><th></th></tr></thead>
             <tbody id="editLinesBody"></tbody>
           </table>
         </div>

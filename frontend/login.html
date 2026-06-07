@@ -103,6 +103,10 @@
     if (localStorage.getItem('dp_token') && storedUser) {
       window.location.href = storedUser.role === 'admin' ? 'admin.html' : 'account.html';
     }
+    if (sessionStorage.getItem('dp_auth_tab') === 'register') {
+      sessionStorage.removeItem('dp_auth_tab');
+      switchAuth('register');
+    }
 
     function redirectAfterAuth(user) {
       window.location.href = user.role === 'admin' ? 'admin.html' : 'account.html';

@@ -5,14 +5,28 @@ function canAccessQuote(user, quote) {
   return user.role === 'admin' || quote.user_id === user.id;
 }
 
+function normalizeLines(lines) {
+  return lines.map((l) => {
+    const qty = Number(l.qty) || 0;
+    const price_ht = Number(l.price_ht) || 0;
+    let tva_rate = Number(l.tva_rate);
+    if (!Number.isFinite(tva_rate)) tva_rate = 0.10;
+    if (tva_rate >= 1) tva_rate = tva_rate / 100;
+    const total_ht = +(qty * price_ht).toFixed(2);
+    const total_ttc = +(total_ht * (1 + tva_rate)).toFixed(2);
+    return { ...l, qty, price_ht, tva_rate, total_ht, total_ttc };
+  });
+}
+
 export function saveQuote(req, res) {
   const { client_name, client_email, source, region, lines, prompt_used } = req.body;
   if (!lines || !Array.isArray(lines) || lines.length === 0) {
     return res.status(400).json({ error: 'Le devis doit contenir au moins une ligne.' });
   }
 
-  const total_ht = +lines.reduce((s, l) => s + (l.total_ht || 0), 0).toFixed(2);
-  const total_ttc = +lines.reduce((s, l) => s + (l.total_ttc || 0), 0).toFixed(2);
+  const normalized = normalizeLines(lines);
+  const total_ht = +normalized.reduce((s, l) => s + l.total_ht, 0).toFixed(2);
+  const total_ttc = +normalized.reduce((s, l) => s + l.total_ttc, 0).toFixed(2);
 
   const result = db.prepare(`
     INSERT INTO quotes (user_id, client_name, client_email, source, region, total_ht, total_ttc, lines_json, prompt_used)
@@ -25,7 +39,7 @@ export function saveQuote(req, res) {
     region: region || null,
     total_ht,
     total_ttc,
-    lines_json: JSON.stringify(lines),
+    lines_json: JSON.stringify(normalized),
     prompt_used: prompt_used || null,
   });
 
@@ -92,8 +106,9 @@ export function updateQuote(req, res) {
     return res.status(400).json({ error: 'Le devis doit contenir au moins une ligne.' });
   }
 
-  const total_ht = +lines.reduce((s, l) => s + (l.total_ht || 0), 0).toFixed(2);
-  const total_ttc = +lines.reduce((s, l) => s + (l.total_ttc || 0), 0).toFixed(2);
+  const normalized = normalizeLines(lines);
+  const total_ht = +normalized.reduce((s, l) => s + l.total_ht, 0).toFixed(2);
+  const total_ttc = +normalized.reduce((s, l) => s + l.total_ttc, 0).toFixed(2);
 
   db.prepare(`
     UPDATE quotes
@@ -108,7 +123,7 @@ export function updateQuote(req, res) {
     region: region ?? quote.region,
     total_ht,
     total_ttc,
-    lines_json: JSON.stringify(lines),
+    lines_json: JSON.stringify(normalized),
   });
 
   return res.json({ success: true, id: quote.id, total_ht, total_ttc });
