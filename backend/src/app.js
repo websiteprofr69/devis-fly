@@ -11,6 +11,7 @@ import authRoutes from './routes/auth.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import quoteRoutes from './routes/quote.routes.js';
 import pricingRoutes from './routes/pricing.routes.js';
+import usersRoutes from './routes/users.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -58,6 +59,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);
 app.use('/api/quotes', quoteRoutes);
 app.use('/api/pricing', pricingRoutes);
+app.use('/api/users', usersRoutes);
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', ts: Date.now() }));
 

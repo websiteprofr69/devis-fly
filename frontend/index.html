@@ -179,10 +179,7 @@
         </div>
         <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;">Devis<span style="color:var(--accent);">Pro</span></span>
       </div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <a href="admin.html" style="color:var(--muted);font-size:13px;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Panel Admin</a>
-        <div class="badge badge-orange">Beta</div>
-      </div>
+      <div id="navAuth" style="display:flex;align-items:center;gap:12px;"></div>
     </div>
   </nav>
 
@@ -197,6 +194,12 @@
       <p style="color:var(--muted);font-size:16px;max-width:500px;margin:0 auto;line-height:1.6;">
         Décrivez vos travaux en langage naturel ou construisez votre devis ligne par ligne. L'IA fait le reste.
       </p>
+    </div>
+
+    <!-- Modèle enregistré -->
+    <div id="templateBanner" style="display:none;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;padding:14px 18px;background:var(--accent-dim);border:1px solid rgba(249,115,22,.3);border-radius:12px;flex-wrap:wrap;">
+      <span style="font-size:14px;">Vous avez un modèle de devis enregistré.</span>
+      <button class="btn-primary" type="button" onclick="applyUserTemplate()" style="padding:8px 16px;font-size:13px;">Charger mon modèle</button>
     </div>
 
     <!-- ── TABS ── -->
@@ -332,6 +335,9 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Imprimer / PDF
         </button>
+        <button class="btn-secondary" onclick="saveAsTemplate()">
+          Enregistrer comme modèle
+        </button>
         <button class="btn-primary" onclick="saveQuote()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           Enregistrer le devis
@@ -350,6 +356,22 @@
   </div>
 
   <script src="assets/config.js"></script>
+  <script src="assets/quote-editor.js"></script>
   <script src="assets/app.js"></script>
+  <script>
+    (function renderNav() {
+      const nav = document.getElementById('navAuth');
+      const user = JSON.parse(localStorage.getItem('dp_user') || 'null');
+      const link = (href, label) => `<a href="${href}" style="color:var(--muted);font-size:13px;text-decoration:none;">${label}</a>`;
+      if (!user) {
+        nav.innerHTML = link('login.html', 'Connexion') + '<div class="badge badge-orange">Beta</div>';
+        return;
+      }
+      const accountLink = user.role === 'admin' ? link('admin.html', 'Panel Admin') : link('account.html', 'Mes devis');
+      nav.innerHTML = `<span style="font-size:13px;color:var(--muted);">${user.name || user.email}</span>`
+        + accountLink
+        + `<a href="#" onclick="localStorage.clear();location.href='index.html';return false;" style="color:var(--muted);font-size:13px;text-decoration:none;">Déconnexion</a>`;
+    })();
+  </script>
 </body>
 </html>

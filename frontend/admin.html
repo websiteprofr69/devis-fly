@@ -102,6 +102,10 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Historique des devis
     </a>
+    <a class="nav-item" onclick="showSection('users')" id="nav-users">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Utilisateurs
+    </a>
 
     <div class="nav-section">Configuration</div>
     <a class="nav-item" onclick="showSection('pricing')" id="nav-pricing">
@@ -145,7 +149,7 @@
       <div class="card" style="padding:24px;">
         <h3 style="font-size:15px;font-weight:700;margin-bottom:20px;">Derniers devis</h3>
         <table class="admin-table" id="recentQuotesTable">
-          <thead><tr><th>#</th><th>Client</th><th>Source</th><th>Région</th><th>Total TTC</th><th>Statut</th><th>Date</th></tr></thead>
+          <thead><tr><th>#</th><th>Utilisateur</th><th>Client</th><th>Source</th><th>Région</th><th>Total TTC</th><th>Statut</th><th>Date</th></tr></thead>
           <tbody id="recentQuotesBody"></tbody>
         </table>
       </div>
@@ -168,8 +172,34 @@
 
       <div class="card" style="padding:0;overflow:hidden;">
         <table class="admin-table" id="quotesTable">
-          <thead><tr><th>#</th><th>Client</th><th>Source</th><th>Région</th><th>Total HT</th><th>Total TTC</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead>
+          <thead><tr><th>#</th><th>Utilisateur</th><th>Client</th><th>Source</th><th>Région</th><th>Total HT</th><th>Total TTC</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead>
           <tbody id="quotesBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SECTION: USERS ── -->
+    <div class="section" id="section-users">
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table class="admin-table">
+          <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Devis</th><th>Total TTC</th><th>Inscrit le</th></tr></thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SECTION: USER DETAIL ── -->
+    <div class="section" id="section-user-detail">
+      <button class="btn-secondary" onclick="showSection('users')" style="margin-bottom:20px;">← Retour aux utilisateurs</button>
+      <div id="userDetailHeader" style="margin-bottom:24px;"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;" id="userStatsGrid"></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:20px 24px;border-bottom:1px solid var(--border);">
+          <h3 style="font-size:15px;font-weight:700;">Devis de cet utilisateur</h3>
+        </div>
+        <table class="admin-table">
+          <thead><tr><th>#</th><th>Client</th><th>Source</th><th>Région</th><th>Total TTC</th><th>Statut</th><th>Date</th></tr></thead>
+          <tbody id="userQuotesBody"></tbody>
         </table>
       </div>
     </div>
@@ -242,7 +272,8 @@ let token = localStorage.getItem('dp_token');
 // ── Auth guard ──────────────────────────────────────────────────────────────
 if (!token) window.location.href = 'login.html';
 const user = JSON.parse(localStorage.getItem('dp_user') || '{}');
-document.getElementById('userEmail').textContent = user.email || '';
+if (user.role !== 'admin') window.location.href = 'account.html';
+document.getElementById('userEmail').textContent = user.name || user.email || '';
 
 function logout() {
   localStorage.removeItem('dp_token');
@@ -253,15 +284,16 @@ function logout() {
 const authHeaders = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` });
 
 // ── Navigation ──────────────────────────────────────────────────────────────
-const SECTIONS = { dashboard: 'Dashboard', quotes: 'Historique des devis', pricing: 'Grille tarifaire' };
+const SECTIONS = { dashboard: 'Dashboard', quotes: 'Historique des devis', users: 'Utilisateurs', 'user-detail': 'Fiche utilisateur', pricing: 'Grille tarifaire' };
 function showSection(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById(`section-${name}`).classList.add('active');
-  document.getElementById(`nav-${name}`)?.classList.add('active');
+  if (name !== 'user-detail') document.getElementById(`nav-${name}`)?.classList.add('active');
   document.getElementById('pageTitle').textContent = SECTIONS[name] || name;
   if (name === 'dashboard') loadDashboard();
   if (name === 'quotes') loadQuotes();
+  if (name === 'users') loadUsers();
   if (name === 'pricing') { loadRegions(); loadPricing(); }
 }
 
@@ -309,11 +341,12 @@ async function loadQuotes() {
 function renderQuotesTable(quotes, tbodyId, minimal) {
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
-  if (quotes.length === 0) { tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px;">Aucun devis trouvé</td></tr>`; return; }
+  if (quotes.length === 0) { tbody.innerHTML = `<tr><td colspan="${minimal ? 8 : 10}" style="text-align:center;color:var(--muted);padding:32px;">Aucun devis trouvé</td></tr>`; return; }
 
   tbody.innerHTML = quotes.map(q => `
     <tr>
       <td style="font-family:'Syne',sans-serif;font-weight:700;color:var(--accent);">#${q.id}</td>
+      <td>${userCell(q)}</td>
       <td>${q.client_name || '<span style="color:var(--muted)">—</span>'}</td>
       <td>${q.source === 'ai' ? '<span class="badge badge-orange">IA</span>' : '<span class="badge badge-gray">Manuel</span>'}</td>
       <td style="color:var(--muted);">${q.region || '—'}</td>
@@ -346,6 +379,76 @@ async function deleteQuote(id) {
   if (!confirm('Supprimer ce devis ?')) return;
   await fetch(`${API}/quotes/${id}`, { method:'DELETE', headers:authHeaders() });
   loadQuotes();
+}
+
+function userCell(q) {
+  if (!q.user_id) return '<span style="color:var(--muted)">—</span>';
+  const label = q.user_name || q.user_email || `User #${q.user_id}`;
+  return `<button class="btn-ghost" style="color:var(--accent);font-weight:600;padding:0;" onclick="viewUser(${q.user_id})">${esc(label)}</button>`;
+}
+
+// ── Users ────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  try {
+    const res = await fetch(`${API}/users`, { headers: authHeaders() });
+    const users = await res.json();
+    const tbody = document.getElementById('usersBody');
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px;">Aucun utilisateur</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(u => `
+      <tr style="cursor:pointer;" onclick="viewUser(${u.id})">
+        <td style="font-weight:600;color:var(--accent);">${esc(u.name || '—')}</td>
+        <td>${esc(u.email)}</td>
+        <td>${u.role === 'admin' ? '<span class="badge badge-orange">Admin</span>' : '<span class="badge badge-gray">Utilisateur</span>'}</td>
+        <td>${u.quote_count}</td>
+        <td style="font-weight:600;">${fmt(u.total_ttc)} €</td>
+        <td style="color:var(--muted);font-size:13px;">${fmtDate(u.created_at)}</td>
+      </tr>
+    `).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function viewUser(id) {
+  try {
+    const res = await fetch(`${API}/users/${id}`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    const u = data.user;
+    document.getElementById('userDetailHeader').innerHTML = `
+      <h2 style="font-size:24px;font-weight:800;margin-bottom:6px;">${esc(u.name || u.email)}</h2>
+      <p style="color:var(--muted);">${esc(u.email)} · ${u.role === 'admin' ? 'Administrateur' : 'Utilisateur'} · Inscrit le ${fmtDate(u.created_at)}</p>
+    `;
+    document.getElementById('userStatsGrid').innerHTML = `
+      <div class="stat-card"><div style="font-size:12px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Devis créés</div><div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;">${data.stats.quote_count}</div></div>
+      <div class="stat-card"><div style="font-size:12px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Total TTC</div><div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--accent);">${fmt(data.stats.total_ttc)} €</div></div>
+    `;
+
+    const tbody = document.getElementById('userQuotesBody');
+    if (!data.quotes.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">Aucun devis pour cet utilisateur</td></tr>';
+    } else {
+      tbody.innerHTML = data.quotes.map(q => `
+        <tr>
+          <td style="font-family:'Syne',sans-serif;font-weight:700;color:var(--accent);">#${q.id}</td>
+          <td>${q.client_name || '—'}</td>
+          <td>${q.source === 'ai' ? '<span class="badge badge-orange">IA</span>' : '<span class="badge badge-gray">Manuel</span>'}</td>
+          <td style="color:var(--muted);">${q.region || '—'}</td>
+          <td style="font-weight:600;">${fmt(q.total_ttc)} €</td>
+          <td>${statusBadge(q.status)}</td>
+          <td style="color:var(--muted);font-size:13px;">${fmtDate(q.created_at)}</td>
+        </tr>
+      `).join('');
+    }
+
+    showSection('user-detail');
+  } catch (e) { alert(e.message); }
+}
+
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 }
 
 // ── Pricing ──────────────────────────────────────────────────────────────────

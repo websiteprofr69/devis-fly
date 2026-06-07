@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DevisPro — Connexion Admin</title>
+  <title>DevisPro — Connexion</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
@@ -26,6 +26,11 @@
     .glow{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(249,115,22,.1) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:0;}
     .fade-in{animation:fadeIn .5s ease forwards;}
     @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    .auth-tabs{display:flex;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:28px;}
+    .auth-tab{flex:1;padding:10px;border:none;border-radius:8px;background:transparent;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:all .2s;}
+    .auth-tab.active{background:var(--accent-dim);color:var(--accent);}
+    .auth-panel{display:none;}
+    .auth-panel.active{display:block;}
   </style>
 </head>
 <body>
@@ -33,38 +38,60 @@
   <div class="glow"></div>
 
   <div class="login-card fade-in">
-    <!-- Logo -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:36px;justify-content:center;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px;justify-content:center;">
       <div style="width:40px;height:40px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
       </div>
       <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px;">Devis<span style="color:var(--accent);">Pro</span></span>
     </div>
 
-    <h1 style="font-size:24px;font-weight:800;margin-bottom:6px;text-align:center;">Espace Administrateur</h1>
-    <p style="color:var(--muted);font-size:14px;text-align:center;margin-bottom:32px;">Connectez-vous pour accéder au backoffice</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchAuth('login')">Connexion</button>
+      <button class="auth-tab" id="tab-register" onclick="switchAuth('register')">Inscription</button>
+    </div>
 
     <div id="errorMsg" class="error-msg" style="margin-bottom:20px;"></div>
 
-    <div style="display:flex;flex-direction:column;gap:20px;">
-      <div>
-        <label for="email">Adresse email</label>
-        <input class="input-field" type="email" id="email" placeholder="admin@devispro.fr" autocomplete="email" />
+    <!-- LOGIN -->
+    <div class="auth-panel active" id="panel-login">
+      <h1 style="font-size:22px;font-weight:800;margin-bottom:6px;text-align:center;">Bon retour</h1>
+      <p style="color:var(--muted);font-size:14px;text-align:center;margin-bottom:24px;">Connectez-vous pour gérer vos devis</p>
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <div>
+          <label for="loginEmail">Adresse email</label>
+          <input class="input-field" type="email" id="loginEmail" placeholder="vous@exemple.fr" autocomplete="email" />
+        </div>
+        <div>
+          <label for="loginPassword">Mot de passe</label>
+          <input class="input-field" type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <button class="btn-primary" id="loginBtn" onclick="doLogin()">Se connecter</button>
       </div>
-      <div>
-        <label for="password">Mot de passe</label>
-        <input class="input-field" type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
-      </div>
+    </div>
 
-      <button class="btn-primary" id="loginBtn" onclick="doLogin()">
-        Se connecter
-      </button>
+    <!-- REGISTER -->
+    <div class="auth-panel" id="panel-register">
+      <h1 style="font-size:22px;font-weight:800;margin-bottom:6px;text-align:center;">Créer un compte</h1>
+      <p style="color:var(--muted);font-size:14px;text-align:center;margin-bottom:24px;">Inscrivez-vous pour sauvegarder vos devis</p>
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <div>
+          <label for="regName">Nom / Entreprise</label>
+          <input class="input-field" type="text" id="regName" placeholder="Jean Dupont" autocomplete="name" />
+        </div>
+        <div>
+          <label for="regEmail">Adresse email</label>
+          <input class="input-field" type="email" id="regEmail" placeholder="vous@exemple.fr" autocomplete="email" />
+        </div>
+        <div>
+          <label for="regPassword">Mot de passe</label>
+          <input class="input-field" type="password" id="regPassword" placeholder="6 caractères minimum" autocomplete="new-password" />
+        </div>
+        <button class="btn-primary" id="registerBtn" onclick="doRegister()">Créer mon compte</button>
+      </div>
     </div>
 
     <div style="margin-top:24px;text-align:center;">
-      <a href="index.html" style="color:var(--muted);font-size:13px;text-decoration:none;transition:color .2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
-        ← Retour à l'application
-      </a>
+      <a href="index.html" style="color:var(--muted);font-size:13px;text-decoration:none;">← Retour à l'application</a>
     </div>
   </div>
 
@@ -72,22 +99,35 @@
   <script>
     const API = window.DEVISPRO_API;
 
-    // Redirect if already logged in
-    if (localStorage.getItem('dp_token')) window.location.href = 'admin.html';
+    const storedUser = JSON.parse(localStorage.getItem('dp_user') || 'null');
+    if (localStorage.getItem('dp_token') && storedUser) {
+      window.location.href = storedUser.role === 'admin' ? 'admin.html' : 'account.html';
+    }
 
-    document.getElementById('password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+    function redirectAfterAuth(user) {
+      window.location.href = user.role === 'admin' ? 'admin.html' : 'account.html';
+    }
+
+    function switchAuth(mode) {
+      document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+      document.getElementById('tab-register').classList.toggle('active', mode === 'register');
+      document.getElementById('panel-login').classList.toggle('active', mode === 'login');
+      document.getElementById('panel-register').classList.toggle('active', mode === 'register');
+      document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('regPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
 
     async function doLogin() {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
       const btn = document.getElementById('loginBtn');
-      const errEl = document.getElementById('errorMsg');
-
-      if (!email || !password) { showError('Veuillez remplir tous les champs.'); return; }
+      if (!email || !password) return showError('Veuillez remplir tous les champs.');
 
       btn.disabled = true;
-      btn.innerHTML = `<div class="spinner"></div> Connexion…`;
-      errEl.style.display = 'none';
+      btn.innerHTML = '<div class="spinner"></div> Connexion…';
+      document.getElementById('errorMsg').style.display = 'none';
 
       try {
         const res = await fetch(`${API}/auth/login`, {
@@ -97,14 +137,42 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Erreur de connexion');
-
         localStorage.setItem('dp_token', data.token);
         localStorage.setItem('dp_user', JSON.stringify(data.user));
-        window.location.href = 'admin.html';
+        redirectAfterAuth(data.user);
       } catch (err) {
         showError(err.message);
         btn.disabled = false;
         btn.textContent = 'Se connecter';
+      }
+    }
+
+    async function doRegister() {
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const btn = document.getElementById('registerBtn');
+      if (!email || !password) return showError('Email et mot de passe requis.');
+
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Création…';
+      document.getElementById('errorMsg').style.display = 'none';
+
+      try {
+        const res = await fetch(`${API}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur inscription');
+        localStorage.setItem('dp_token', data.token);
+        localStorage.setItem('dp_user', JSON.stringify(data.user));
+        redirectAfterAuth(data.user);
+      } catch (err) {
+        showError(err.message);
+        btn.disabled = false;
+        btn.textContent = 'Créer mon compte';
       }
     }
 

@@ -16,9 +16,10 @@ db.pragma('foreign_keys = ON');
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    name      TEXT,
     email     TEXT    UNIQUE NOT NULL,
     password  TEXT    NOT NULL,
-    role      TEXT    NOT NULL DEFAULT 'admin',
+    role      TEXT    NOT NULL DEFAULT 'user',
     created_at TEXT   DEFAULT (datetime('now'))
   );
 
@@ -35,6 +36,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS quotes (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id      INTEGER REFERENCES users(id),
     client_name  TEXT,
     client_email TEXT,
     source       TEXT NOT NULL DEFAULT 'ai',
@@ -48,6 +50,14 @@ db.exec(`
     updated_at   TEXT DEFAULT (datetime('now'))
   );
 `);
+
+// ── Migrations (bases existantes) ────────────────────────────────────────────
+const userCols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+if (!userCols.includes('name')) db.exec('ALTER TABLE users ADD COLUMN name TEXT');
+if (!userCols.includes('template_json')) db.exec('ALTER TABLE users ADD COLUMN template_json TEXT');
+
+const quoteCols = db.prepare('PRAGMA table_info(quotes)').all().map((c) => c.name);
+if (!quoteCols.includes('user_id')) db.exec('ALTER TABLE quotes ADD COLUMN user_id INTEGER REFERENCES users(id)');
 
 // ── Seed Default Pricing Grid ────────────────────────────────────────────────
 const seedCount = db.prepare('SELECT COUNT(*) as c FROM pricing_grid').get();

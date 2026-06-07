@@ -1,9 +1,10 @@
 // frontend/assets/app.js
 const API = window.DEVISPRO_API;
-let currentLines = [];
 let currentSource = 'ai';
 let currentRegion = 'Île-de-France';
 let promptUsed = '';
+
+QuoteEditor.configure({ tbodyId: 'linesBody', totalsIds: { ht: 'totalHT', tva: 'totalTVA', ttc: 'totalTTC' } });
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function switchTab(tab) {
@@ -13,7 +14,7 @@ function switchTab(tab) {
   document.getElementById('panel-manual').style.display = tab === 'manual' ? 'block' : 'none';
   currentSource = tab;
 
-  if (tab === 'manual' && currentLines.length === 0) {
+  if (tab === 'manual' && QuoteEditor.lines.length === 0) {
     addLine();
     document.getElementById('quoteEditor').style.display = 'block';
   }
@@ -47,10 +48,9 @@ async function generateQuote() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur serveur');
 
-    currentLines = data.lines;
+    QuoteEditor.setLines(data.lines);
     currentRegion = data.region;
 
-    // Show summary card
     const s = document.getElementById('aiSummary');
     s.innerHTML = `
       <div style="padding:20px;">
@@ -79,7 +79,7 @@ async function generateQuote() {
         ${data.extracted.notes ? `<p style="margin-top:12px;font-size:13px;color:var(--muted);">📝 ${data.extracted.notes}</p>` : ''}
       </div>`;
     s.style.display = 'block';
-    renderLines();
+    QuoteEditor.render();
     document.getElementById('quoteEditor').style.display = 'block';
     showToast(`${data.lines.length} prestation(s) générée(s)`, 'success');
   } catch (err) {
@@ -91,84 +91,33 @@ async function generateQuote() {
   }
 }
 
-// ── Lines Renderer ────────────────────────────────────────────────────────────
-function renderLines() {
-  const tbody = document.getElementById('linesBody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-  currentLines.forEach((line, i) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><input class="input-field" style="min-width:180px;" value="${esc(line.designation)}" onchange="updateLine(${i},'designation',this.value)" /></td>
-      <td>
-        <select class="input-field" onchange="updateLine(${i},'unit',this.value)">
-          ${['m2','ml','h','forfait','u'].map(u => `<option ${line.unit===u?'selected':''}>${u}</option>`).join('')}
-        </select>
-      </td>
-      <td><input class="input-field" type="number" min="0" step="0.01" value="${line.qty}" onchange="updateLine(${i},'qty',+this.value)" /></td>
-      <td><input class="input-field" type="number" min="0" step="0.01" value="${line.price_ht}" onchange="updateLine(${i},'price_ht',+this.value)" /></td>
-      <td>
-        <select class="input-field" onchange="updateLine(${i},'tva_rate',+this.value)">
-          <option value="0.10" ${line.tva_rate===0.10?'selected':''}>10%</option>
-          <option value="0.20" ${line.tva_rate===0.20?'selected':''}>20%</option>
-          <option value="0.055" ${line.tva_rate===0.055?'selected':''}>5.5%</option>
-        </select>
-      </td>
-      <td style="font-weight:600;font-family:'Syne',sans-serif;color:var(--text);">${fmt(line.total_ttc)} €</td>
-      <td>
-        <button class="btn-ghost" title="Supprimer" onclick="removeLine(${i})">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-        </button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-  recalcTotals();
-}
-
-function updateLine(i, field, val) {
-  currentLines[i][field] = val;
-  const l = currentLines[i];
-  l.total_ht = +(l.qty * l.price_ht).toFixed(2);
-  l.total_ttc = +(l.total_ht * (1 + l.tva_rate)).toFixed(2);
-  // Update TTC cell without full re-render (performance)
-  const rows = document.getElementById('linesBody').rows;
-  if (rows[i]) rows[i].cells[5].textContent = `${fmt(l.total_ttc)} €`;
-  recalcTotals();
-}
-
-function addLine() {
-  currentLines.push({ designation: 'Nouvelle prestation', unit: 'm2', qty: 1, price_ht: 0, tva_rate: 0.10, total_ht: 0, total_ttc: 0, editable: true });
-  renderLines();
-  document.getElementById('quoteEditor').style.display = 'block';
-}
-
-function removeLine(i) {
-  currentLines.splice(i, 1);
-  renderLines();
-}
-
-function recalcTotals() {
-  const ht = +currentLines.reduce((s, l) => s + l.total_ht, 0).toFixed(2);
-  const ttc = +currentLines.reduce((s, l) => s + l.total_ttc, 0).toFixed(2);
-  const tva = +(ttc - ht).toFixed(2);
-  document.getElementById('totalHT').textContent = `${fmt(ht)} €`;
-  document.getElementById('totalTVA').textContent = `${fmt(tva)} €`;
-  document.getElementById('totalTTC').textContent = `${fmt(ttc)} €`;
-}
+function renderLines() { QuoteEditor.render(); }
+function addLine() { QuoteEditor.addLine(); document.getElementById('quoteEditor').style.display = 'block'; }
+function removeLine(i) { QuoteEditor.removeLine(i); }
+function updateLine(i, field, val) { QuoteEditor.updateLine(i, field, val); }
+function recalcTotals() { QuoteEditor.updateTotals(); }
 
 // ── Save Quote ────────────────────────────────────────────────────────────────
 async function saveQuote() {
-  if (currentLines.length === 0) return showToast('Ajoutez au moins une ligne.', 'error');
+  if (QuoteEditor.lines.length === 0) return showToast('Ajoutez au moins une ligne.', 'error');
+
+  const token = localStorage.getItem('dp_token');
+  if (!token) {
+    showToast('Connectez-vous pour enregistrer un devis.', 'error');
+    setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+    return;
+  }
+
   try {
     const res = await fetch(`${API}/quotes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         client_name: document.getElementById('clientName')?.value || null,
         client_email: document.getElementById('clientEmail')?.value || null,
         source: currentSource,
-        region: currentRegion,
-        lines: currentLines,
+        region: document.getElementById('manualRegion')?.value || currentRegion,
+        lines: QuoteEditor.lines,
         prompt_used: promptUsed,
       }),
     });
@@ -180,24 +129,75 @@ async function saveQuote() {
   }
 }
 
+async function saveAsTemplate() {
+  if (QuoteEditor.lines.length === 0) return showToast('Ajoutez au moins une ligne.', 'error');
+  const token = localStorage.getItem('dp_token');
+  if (!token) return showToast('Connectez-vous pour enregistrer un modèle.', 'error');
+
+  try {
+    const res = await fetch(`${API}/auth/template`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        lines: QuoteEditor.lines,
+        region: document.getElementById('manualRegion')?.value || currentRegion,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showToast('Modèle enregistré pour vos prochains devis', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function loadUserTemplate() {
+  const token = localStorage.getItem('dp_token');
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${API}/auth/template`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    if (!data?.lines?.length) return;
+
+    const banner = document.getElementById('templateBanner');
+    if (banner) {
+      banner.style.display = 'flex';
+      banner.dataset.loaded = '0';
+      window._savedTemplate = data;
+    }
+  } catch { /* ignore */ }
+}
+
+function applyUserTemplate() {
+  const data = window._savedTemplate;
+  if (!data?.lines?.length) return;
+  QuoteEditor.setLines(data.lines);
+  if (data.region) {
+    currentRegion = data.region;
+    const sel = document.getElementById('manualRegion');
+    if (sel) sel.value = data.region;
+  }
+  switchTab('manual');
+  QuoteEditor.render();
+  document.getElementById('quoteEditor').style.display = 'block';
+  document.getElementById('templateBanner').style.display = 'none';
+  showToast('Modèle chargé — modifiez les prix et enregistrez', 'success');
+}
+
 function resetQuote() {
-  currentLines = [];
+  QuoteEditor.setLines([]);
   promptUsed = '';
   document.getElementById('quoteEditor').style.display = 'none';
   document.getElementById('aiSummary').style.display = 'none';
   document.getElementById('promptInput').value = '';
-  recalcTotals();
+  QuoteEditor.updateTotals();
 }
 
-function printQuote() {
-  window.print();
-}
+function printQuote() { window.print(); }
 
-// ── Utils ─────────────────────────────────────────────────────────────────────
-function fmt(n) {
-  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
-}
-function esc(str) { return (str || '').replace(/"/g, '&quot;'); }
+function fmt(n) { return QuoteEditor.fmt(n); }
+function esc(str) { return QuoteEditor.esc(str); }
 
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
@@ -211,7 +211,30 @@ function showToast(msg, type = 'success') {
   setTimeout(() => { t.className = type; }, 3800);
 }
 
-// Allow Enter key to generate
 document.getElementById('promptInput')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.ctrlKey) generateQuote();
 });
+
+(function initFromAccount() {
+  const raw = localStorage.getItem('dp_load_template');
+  if (raw) {
+    localStorage.removeItem('dp_load_template');
+    try {
+      const data = JSON.parse(raw);
+      if (data?.lines?.length) {
+        QuoteEditor.setLines(data.lines);
+        if (data.region) {
+          currentRegion = data.region;
+          const sel = document.getElementById('manualRegion');
+          if (sel) sel.value = data.region;
+        }
+        switchTab('manual');
+        QuoteEditor.render();
+        document.getElementById('quoteEditor').style.display = 'block';
+        showToast('Modèle chargé depuis votre espace', 'success');
+        return;
+      }
+    } catch { /* ignore */ }
+  }
+  loadUserTemplate();
+})();
