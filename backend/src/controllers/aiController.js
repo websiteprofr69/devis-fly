@@ -2,12 +2,15 @@
 import Anthropic from '@anthropic-ai/sdk';
 import db from '../config/database.js';
 
+const AI_MODEL = process.env.AI_MODEL || 'anthropic/claude-sonnet-4';
+
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
   baseURL: 'https://openrouter.ai/api/v1',
   defaultHeaders: {
     'HTTP-Referer': process.env.APP_URL || 'https://devis.fly.dev',
-  }
+    'X-Title': 'DevisPro',
+  },
 });
 
 /**
@@ -27,7 +30,7 @@ export async function generateFromPrompt(req, res, next) {
 
     // ── Step 1: Extract structured data from LLM ─────────────────────────────
     const extractionResponse = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODEL,
       max_tokens: 1024,
       system: `Tu es un assistant expert en bâtiment et toiture. Ton rôle est d'extraire des informations structurées d'une demande de devis en français.
 Réponds UNIQUEMENT en JSON valide, sans markdown, sans texte avant ou après.
@@ -115,6 +118,14 @@ Le JSON doit respecter strictement ce schéma :
       totals: { total_ht: totalHt, total_ttc: totalTtc, tva: +(totalTtc - totalHt).toFixed(2) },
     });
   } catch (err) {
-    next(err);
+    console.error('[AI]', err.message);
+    const msg = String(err.message || '');
+    if (msg.includes('401') || msg.includes('Unauthorized')) {
+      return res.status(502).json({ error: 'Clé API OpenRouter invalide. Vérifiez ANTHROPIC_API_KEY sur Fly.io.' });
+    }
+    if (msg.includes('404')) {
+      return res.status(502).json({ error: 'Modèle IA introuvable sur OpenRouter. Contactez le support.' });
+    }
+    return res.status(502).json({ error: 'Service IA temporairement indisponible. Réessayez dans un instant.' });
   }
 }
