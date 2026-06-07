@@ -153,16 +153,26 @@
     }
 
     /* Champs numériques devis — éviter que 150 s'affiche comme 15 */
+    .quote-qty-cell { width: 130px; min-width: 130px; }
+    .quote-price-cell { width: 140px; min-width: 140px; }
     .quote-num-input {
-      min-width: 96px;
+      min-width: 110px;
       width: 100%;
+      max-width: none;
       text-align: right;
       font-variant-numeric: tabular-nums;
       font-size: 15px;
       padding: 10px 14px;
+      -moz-appearance: textfield;
+      appearance: textfield;
     }
-    .quote-qty-input { min-width: 100px; }
-    .quote-price-input { min-width: 120px; }
+    .quote-num-input::-webkit-outer-spin-button,
+    .quote-num-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .quote-qty-input { min-width: 120px; }
+    .quote-price-input { min-width: 130px; }
 
     /* Loading spinner */
     .spinner {
@@ -348,8 +358,8 @@
               <tr>
                 <th style="min-width:200px;">Désignation</th>
                 <th style="width:90px;">Unité</th>
-                <th style="min-width:100px;">Qté</th>
-                <th style="min-width:120px;">Prix HT</th>
+                <th class="quote-qty-cell">Qté</th>
+                <th class="quote-price-cell">Prix HT</th>
                 <th style="width:90px;">TVA</th>
                 <th style="width:110px;">Total TTC</th>
                 <th style="width:40px;"></th>
@@ -410,9 +420,9 @@
     <span id="toastMsg"></span>
   </div>
 
-  <script src="assets/config.js"></script>
-  <script src="assets/quote-editor.js"></script>
-  <script src="assets/app.js"></script>
+  <script src="assets/config.js?v=20250607"></script>
+  <script src="assets/quote-editor.js?v=20250607"></script>
+  <script src="assets/app.js?v=20250607"></script>
   <script>
     (function renderNav() {
       const nav = document.getElementById('navAuth');

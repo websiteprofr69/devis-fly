@@ -31,9 +31,12 @@
     .btn-danger{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;}
     .btn-ghost{background:transparent;color:var(--muted);border:none;padding:5px 8px;border-radius:6px;cursor:pointer;}
     .btn-ghost:hover{color:var(--text);background:var(--surface2);}
-    .quote-num-input{min-width:96px;width:100%;text-align:right;font-variant-numeric:tabular-nums;font-size:15px;padding:10px 14px;}
-    .quote-qty-input{min-width:100px;}
-    .quote-price-input{min-width:120px;}
+    .quote-qty-cell{width:130px;min-width:130px;}
+    .quote-price-cell{width:140px;min-width:140px;}
+    .quote-num-input{min-width:110px;width:100%;max-width:none;text-align:right;font-variant-numeric:tabular-nums;font-size:15px;padding:10px 14px;-moz-appearance:textfield;appearance:textfield;}
+    .quote-num-input::-webkit-outer-spin-button,.quote-num-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+    .quote-qty-input{min-width:120px;}
+    .quote-price-input{min-width:130px;}
     .view{display:none;}
     .view.active{display:block;}
     #toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;display:none;z-index:100;font-size:14px;}
@@ -138,8 +141,8 @@
 
   <div id="toast"><span id="toastMsg"></span></div>
 
-  <script src="assets/config.js"></script>
-  <script src="assets/quote-editor.js"></script>
+  <script src="assets/config.js?v=20250607"></script>
+  <script src="assets/quote-editor.js?v=20250607"></script>
   <script>
     const API = window.DEVISPRO_API;
     const token = localStorage.getItem('dp_token');

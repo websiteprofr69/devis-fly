@@ -66,11 +66,11 @@ window.QuoteEditor = {
             ${['m2','ml','h','forfait','u'].map((u) => `<option ${line.unit === u ? 'selected' : ''}>${u}</option>`).join('')}
           </select>
         </td>
-        <td style="min-width:100px;">
-          <input class="input-field quote-num-input quote-qty-input" type="text" inputmode="numeric" title="${this.fmtQty(line.qty)}" value="${this.fmtQty(line.qty)}" onchange="QuoteEditor.updateLine(${i},'qty',this.value)" />
+        <td class="quote-qty-cell">
+          <input class="input-field quote-num-input quote-qty-input" type="text" inputmode="numeric" size="8" title="${this.fmtQty(line.qty)}" value="${this.fmtQty(line.qty)}" onchange="QuoteEditor.updateLine(${i},'qty',this.value)" />
         </td>
-        <td style="min-width:120px;">
-          <input class="input-field quote-num-input quote-price-input" type="text" inputmode="decimal" title="${this.fmtPrice(line.price_ht)}" value="${this.fmtPrice(line.price_ht)}" onchange="QuoteEditor.updateLine(${i},'price_ht',this.value)" />
+        <td class="quote-price-cell">
+          <input class="input-field quote-num-input quote-price-input" type="text" inputmode="decimal" size="10" title="${this.fmtPrice(line.price_ht)}" value="${this.fmtPrice(line.price_ht)}" onchange="QuoteEditor.updateLine(${i},'price_ht',this.value)" />
         </td>
         <td>
           <select class="input-field" onchange="QuoteEditor.updateLine(${i},'tva_rate',this.value)">
